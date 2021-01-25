@@ -75,7 +75,7 @@
       const HOST = (new URL(document.location)).host;
       const PATHNAME = (new URL(document.location)).pathname.replace(/\/+$/, '');
       const API_GW_URL = 'https://api.zeer0.com/v001';
-      const EMAIL_CONTENT_URL = `${API_GW_URL}/get`;
+      const EMAIL_CONTENT_URL = `${API_GW_URL}/show-mail`;
       const DEFAULT_FQDN = HOST.startsWith('localhost') ? 'moogle.cc' : HOST;
       const DEFAULT_COMMENT = "(preview your comment here...)";
       var app = new Vue({
