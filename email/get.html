@@ -121,7 +121,7 @@
             this.shareableUrl = `${url.origin}/r/${urlParams.get('shortlink')}`;
           }
           this.showdownConverter = new showdown.Converter();
-          this.showSnackbar('Retrieved2 email', 'is-dark', 'Okay');
+          this.showSnackbar('Retrieved you mail');
         },
         computed: {
           iframeSrc: function(){
@@ -161,7 +161,7 @@
             copyText.select();
             document.execCommand("copy");
             copyText.type = 'hidden';
-            this.showSnackbar('Link copied');
+            this.showSnackbar('Link has been copied to clipboard');
           },
           showSnackbar : function(msg, type, actionText){
             this.$buefy.notification.open({
