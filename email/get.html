@@ -12,9 +12,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css">
     <script src="/js/aws-sdk-2.756.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js" integrity="sha512-L03kznCrNOfVxOUovR6ESfCz9Gfny7gihUX/huVbQB9zjODtYpxaVtIaAkpetoiyV2eqWbvxMH9fiSv5enX7bw==" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://unpkg.com/buefy/dist/buefy.min.css">
+    <script src="https://unpkg.com/buefy/dist/buefy.min.js"></script>
   </head>
   <body>
     <form id="email-contents">
+      <input type="hidden" id="shareable-link" :value="shareableUrl">
       <nav class="container navbar" role="navigation" aria-label="main navigation">
         <div class="navbar-brand">
           <a class="navbar-item is-small title" href="/"><h2 class="highlight">Moogle!</h2></a>
@@ -56,7 +59,8 @@
         <div class="column is-one-fifth is-size-6 has-text-weight-light">
           <!-- email actions-->
           <div class="control">
-            <a :href="iframeSrc" :download="`${emailSubject}.html`" class="button is-link">Download&nbsp;&nbsp;<i class="fas fa-cloud-download-alt"></i></a>
+            <a :href="iframeSrc" :download="`${emailSubject}.html`" class="button is-link is-outlined" title="download email"><i class="fas fa-cloud-download-alt"></i></a>
+            <a v-if="shareableUrl" :href="iframeSrc" class="button is-link is-outlined" title="copy email shortlink" @click.prevent="copyToClipboard()"><i class="fas fa-share-alt"></i></a>
           </div>
           <div class="control">
             <p>Discuss</p>
@@ -69,6 +73,7 @@
       </div>
     </form>
     <script>
+      // import {Snackbar} from 'vulmajs';
       const ADDRESS_DELIM = ",";
       const EMAIL_ADDRESS_DELIM = "@";
       const ORIGIN = (new URL(document.location)).origin;
@@ -101,16 +106,22 @@
             newComment: undefined,
             currentEmailId: undefined,
             showdownConverter: undefined,
+            shareableUrl: undefined,
           }
         },
         async mounted(){
           //from query string, get the email id
           //getEmail with email id
+          var url = new URL(window.location);
           var urlParams = new URLSearchParams(window.location.search);
           if(urlParams.has('emailId')){
             this.emailSet = [await this.getEmail(urlParams.get('emailId'))];
           }
+          if(urlParams.has('shortlink')){
+            this.shareableUrl = `${url.origin}/r/${urlParams.get('shortlink')}`;
+          }
           this.showdownConverter = new showdown.Converter();
+          this.showSnackbar('Retrieved2 email', 'is-dark', 'Okay');
         },
         computed: {
           iframeSrc: function(){
@@ -144,6 +155,29 @@
           }
         },
         methods:{
+          copyToClipboard: function() {
+            var copyText = document.getElementById("shareable-link");
+            copyText.type = 'text';
+            copyText.select();
+            document.execCommand("copy");
+            copyText.type = 'hidden';
+            this.showSnackbar('Link copied');
+          },
+          showSnackbar : function(msg, type, actionText){
+            this.$buefy.notification.open({
+              message: msg || '',
+              type: type || 'is-dark',
+              position: 'is-bottom',
+              actionText: actionText || 'Hello',
+              indefinite: false,
+              onAction: () => {
+                  // this.$toast.open({
+                  //     message: 'Action pressed',
+                  //     queue: false
+                  // })
+              }
+          })
+          },
           updateComments: function(){
             this.commentPreview = this.showdownConverter.makeHtml(this.newComment);
           },
