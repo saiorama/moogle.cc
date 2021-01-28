@@ -61,9 +61,9 @@
           <div class="control">
             <a :href="iframeSrc" :download="`${emailSubject}.html`" class="button is-link is-outlined" title="download email"><i class="fas fa-cloud-download-alt"></i></a>
             <a v-if="shareableUrl" :href="iframeSrc" class="button is-link is-outlined" title="copy email shortlink" @click.prevent="copyToClipboard()"><i class="fas fa-share-alt"></i></a>
+            <a :href="iframeSrc" class="button is-link is-outlined" title="discuss email" @click.prevent="showCommentSection = true"><i class="far fa-comment-alt"></i></a>
           </div>
-          <div class="control">
-            <p>Discuss</p>
+          <div class="control" v-if="showCommentSection">
             <textarea id="markdown-comments-area" @input="updateComments" v-model="newComment" class="textarea is-primary is-small" placeholder="(Add comments using markdown)"></textarea>
             <button class="button is-normal is-primary is-fullwidth" @click.prevent="saveComment()">Save Comment</button>
             <p v-html="commentPreview" class="has-background-light is-size-7"></p>
@@ -107,6 +107,7 @@
             currentEmailId: undefined,
             showdownConverter: undefined,
             shareableUrl: undefined,
+            showCommentSection: undefined,
           }
         },
         async mounted(){
@@ -182,7 +183,8 @@
             this.commentPreview = this.showdownConverter.makeHtml(this.newComment);
           },
           saveComment: function(){
-            this.$buefy.showSnackbar(`Oops! We haven't implemented this yet!`);
+            this.showSnackbar(`Oops! We haven't implemented this yet! Check back in a couple of days.`);
+            this.showCommentSection = false;
             if(this.newComment){
               //post updated comments json to S3
             }
