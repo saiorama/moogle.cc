@@ -126,13 +126,11 @@
         async mounted(){
           //from query string, get the email id
           //getEmail with email id
-          var url = new URL(window.location);
-          var urlParams = new URLSearchParams(window.location.search);
-          if(urlParams.has('emailId')){
-            this.emailSet = [await this.getEmail(urlParams.get('emailId'))];
+          if(this.pageId){
+            this.emailSet = [await this.getEmail(this.pageId)];
           }
-          if(urlParams.has('shortlink')){
-            this.shareableUrl = `${url.origin}/r/${urlParams.get('shortlink')}`;
+          if(this.shortLink){
+            this.shareableUrl = `${url.origin}/r/${this.shortLink}`;
           }
           this.showdownConverter = new showdown.Converter();
           this.showSnackbar('Retrieved your mail');
@@ -149,7 +147,17 @@
           },
           attachments: function(){
             return this.currentEmail.attachments;
-          }
+          },
+          shortLink: () => {
+            var url = new URL(window.location);
+            var urlParams = new URLSearchParams(window.location.search);
+            return urlParams.has('shortlink') ? urlParams.get('shortlink'): undefined;
+          },
+          pageId: () => {
+            var url = new URL(window.location);
+            var urlParams = new URLSearchParams(window.location.search);
+            return urlParams.has('emailId') ? urlParams.get('emailId'): undefined;
+          },
         },
         watch: {
           emailSet: async function(neww, old) {
@@ -196,12 +204,10 @@
             })
           },
           getComments: function(){
-            var url = new URL(window.location);
-            var urlParams = new URLSearchParams(window.location.search);
-            if(urlParams.has('shortlink')){
+            if(this.shortLink){
               let vm = this;
               return axios({
-                url: `${EMAIL_COMMENTS_URL}?short_link=${urlParams.get('shortlink')}`,
+                url: `${EMAIL_COMMENTS_URL}?short_link=${this.shortLink}`,
               })
               .then( (response) => {
                 if(response.data && response.data.comments){
@@ -217,15 +223,19 @@
           updateComments: function(){
             this.commentPreview = this.showdownConverter.makeHtml(this.newComment);
           },
+          clearCommentAndPreview: function(){
+            this.newComment = undefined;
+            this.commentPreview = DEFAULT_COMMENT;
+          },
           saveComment: _.debounce(function(){
             if(this.newComment){
               //post updated comments json to S3
               let x = {
-                  "thread_identifier": `59baa10046-${Date.now()}`,
+                  "thread_identifier": `${this.shortLink}-${Date.now()}`,
                   "comment_id": 'NEW',
                   "update_type": 'NEW',
-                  "short_link": "59baa10046",
-                  "page_url": "2021-01-28-1611831586299-cvv4pnr3tmdhtmuj4nmchk6qogimtae4uv25cq01",
+                  "short_link": this.shortLink,
+                  "page_url": this.pageId,
                   "commenter_name": this.commenterName || DEFAULT_COMMENTER_NAME,
                   "commenter_id": this.commenterId || DEFAULT_COMMENTER_ID,
                   "commented_at":  Date.now(),
@@ -240,12 +250,14 @@
               .then(response => {
                 this.showSnackbar('Your comment was saved');
               })
+              .then(() => this.getComments())
+              .then(() => this.clearCommentAndPreview())
               .catch(e => {
                 this.showSnackbar('Your comment could not be saved!', 'is-danger');
               });
             }
             this.showSnackbar(`Have you entered a comment?`, 'is-warning');
-          }, 5000, {'leading': false}),
+          }, 1500, {'leading': false}),
           getSender: function(){
             let from = this.makeAddressList(`from`);
             return from && from.length === 1 ? from[0] : undefined;
