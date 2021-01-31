@@ -64,19 +64,48 @@
             <a v-if="shareableUrl" :href="iframeSrc" class="button is-link is-outlined" title="copy email shortlink" @click.prevent="copyToClipboard()"><i class="fas fa-share-alt"></i></a>
             <a :href="iframeSrc" class="button is-link is-outlined" title="discuss email" @click.prevent="showCommentSection = true"><i class="far fa-comment-alt"></i></a>
           </div>
-          <div class="control" v-if="showCommentSection">
+          <div class="control pr-2" v-if="showCommentSection">
             <b-field label="Your name">
               <b-input v-model="commenterName"></b-input>
             </b-field>
             <textarea id="markdown-comments-area" @input="updateComments" v-model="newComment" class="textarea is-primary is-small" placeholder="(Add comments using markdown. No emojis though.)"></textarea>
-            <button class="button is-normal is-primary is-fullwidth" :class="{'is-loading' : loadingComments}" @click.prevent="saveComment()">Save Comment</button>
-            <p v-html="commentPreview" class="has-background-light is-size-7"></p>
-            <div class="has-background-light is-size-7" v-for="comment in comments">
+            <!-- <button class="button is-normal is-primary is-fullwidth" :class="{'is-loading' : loadingComments}" @click.prevent="saveComment()">Save Comment</button> -->
+            <div class="columns is-gapless">
+              <div class="column is-11">
+                <button class="button is-normal is-primary is-fullwidth my-1" :class="{'is-loading' : loadingComments}" @click.prevent="saveComment()">Save Comment</button>
+              </div>
+              <div class="column">
+                <span class="icon-text">
+                  <span class="icon">
+                    <i class="fas fa-info-circle" @click.prevent="isMarkdownModalActive = true"></i>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <span v-html="commentPreview" class="has-background-light is-size-7 my-2 py-2"></span>
+            <div class="is-size-7 my-2 py-2" :class="{'has-background-light' : idx%2 === 0, 'has-background-white' : idx%2 === 1}" v-for="(comment,idx) in comments">
               <p class="has-text-weight-semibold">{{comment.commenter_name}} @ {{ friendlyDate(comment.commented_at)}}</p>
               <p class="has-text-weight-light " v-html="comment.html_part"></p>
             </div>
           </div>
         </div>
+      </div>
+      <div>
+        <b-modal has-modal-card v-model="isMarkdownModalActive">
+          <div class="card">
+              <div class="card-content">
+                  <div class="content">
+                    <h3>Markdown Cheatsheet</h3>
+                    <ul>
+                      <li>**Bold** : <strong>Bold</strong></li>
+                      <li>*Italics*: <em>Italics</em></li>
+                      <li>[Link Text](https://moogle.cc): <a href="/">Link Text</a></li>
+                      <li>We don't yet support emojis</li>
+                    </ul>
+                  </div>
+              </div>
+          </div>
+      </b-modal>
       </div>
     </form>
     <script>
@@ -122,6 +151,7 @@
             commenterName: undefined,
             commenterId: undefined,
             loadingComments: undefined,
+            isMarkdownModalActive: false,
           }
         },
         async mounted(){
