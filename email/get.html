@@ -14,6 +14,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js" integrity="sha512-L03kznCrNOfVxOUovR6ESfCz9Gfny7gihUX/huVbQB9zjODtYpxaVtIaAkpetoiyV2eqWbvxMH9fiSv5enX7bw==" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://unpkg.com/buefy/dist/buefy.min.css">
     <script src="https://unpkg.com/buefy/dist/buefy.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script>
   </head>
   <body>
     <form id="email-contents">
@@ -64,10 +65,16 @@
             <a :href="iframeSrc" class="button is-link is-outlined" title="discuss email" @click.prevent="showCommentSection = true"><i class="far fa-comment-alt"></i></a>
           </div>
           <div class="control" v-if="showCommentSection">
+            <b-field label="Your name">
+              <b-input v-model="commenterName"></b-input>
+            </b-field>
             <textarea id="markdown-comments-area" @input="updateComments" v-model="newComment" class="textarea is-primary is-small" placeholder="(Add comments using markdown)"></textarea>
             <button class="button is-normal is-primary is-fullwidth" @click.prevent="saveComment()">Save Comment</button>
             <p v-html="commentPreview" class="has-background-light is-size-7"></p>
-            <p v-html="comments" class="has-background-white is-size-7"></p>
+            <div class="has-background-light is-size-7" v-for="comment in comments">
+              <p class="has-text-weight-semibold">{{comment.commenter_name}} @ {{ friendlyDate(comment.commented_at)}}</p>
+              <p class="has-text-weight-light " v-html="comment.html_part"></p>
+            </div>
           </div>
         </div>
       </div>
@@ -81,8 +88,11 @@
       const PATHNAME = (new URL(document.location)).pathname.replace(/\/+$/, '');
       const API_GW_URL = 'https://api.zeer0.com/v001';
       const EMAIL_CONTENT_URL = `${API_GW_URL}/show-mail`;
+      const EMAIL_COMMENTS_URL = `${API_GW_URL}/tools/comments`;
       const DEFAULT_FQDN = HOST.startsWith('localhost') ? 'moogle.cc' : HOST;
       const DEFAULT_COMMENT = "(preview your comment here...)";
+      const DEFAULT_COMMENTER_NAME = "I am a Snooper";
+      const DEFAULT_COMMENTER_ID = "Snooper_Dog";
       var app = new Vue({
         el: '#email-contents',
         data(){
@@ -108,6 +118,9 @@
             showdownConverter: undefined,
             shareableUrl: undefined,
             showCommentSection: undefined,
+            comments: undefined,
+            commenterName: undefined,
+            commenterId: undefined,
           }
         },
         async mounted(){
@@ -123,6 +136,8 @@
           }
           this.showdownConverter = new showdown.Converter();
           this.showSnackbar('Retrieved your mail');
+          this.showCommentSection = true;
+          this.getComments();
         },
         computed: {
           iframeSrc: function(){
@@ -137,9 +152,10 @@
           }
         },
         watch: {
-          emailSet: function(neww, old) {
+          emailSet: async function(neww, old) {
             if(neww && neww.length > 0){
               this.showEmail(neww[0]);
+              // this.getComments();
               this.emailSubject = neww[0].subject;
             }
           },
@@ -153,7 +169,7 @@
           },
           emailSubject: function(neww, old){
             if(neww) document.title = neww;
-          }
+          },
         },
         methods:{
           copyToClipboard: function() {
@@ -176,19 +192,60 @@
                   //     message: 'Action pressed',
                   //     queue: false
                   // })
-              }
-          })
+                }
+            })
+          },
+          getComments: function(){
+            var url = new URL(window.location);
+            var urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.has('shortlink')){
+              let vm = this;
+              return axios({
+                url: `${EMAIL_COMMENTS_URL}?short_link=${urlParams.get('shortlink')}`,
+              })
+              .then( (response) => {
+                if(response.data && response.data.comments){
+                  vm.comments = response.data.comments.map(comment => JSON.parse(comment));
+                  vm.comments.reverse();
+                }
+              })
+              .catch(e => {
+                return undefined;
+              });
+            }
           },
           updateComments: function(){
             this.commentPreview = this.showdownConverter.makeHtml(this.newComment);
           },
-          saveComment: function(){
-            this.showSnackbar(`Oops! We haven't implemented this yet! Check back in a couple of days.`);
-            this.showCommentSection = false;
+          saveComment: _.debounce(function(){
             if(this.newComment){
               //post updated comments json to S3
+              let x = {
+                  "thread_identifier": `59baa10046-${Date.now()}`,
+                  "comment_id": 'NEW',
+                  "update_type": 'NEW',
+                  "short_link": "59baa10046",
+                  "page_url": "2021-01-28-1611831586299-cvv4pnr3tmdhtmuj4nmchk6qogimtae4uv25cq01",
+                  "commenter_name": this.commenterName || DEFAULT_COMMENTER_NAME,
+                  "commenter_id": this.commenterId || DEFAULT_COMMENTER_ID,
+                  "commented_at":  Date.now(),
+                  "html_part": this.commentPreview,
+                  "text_part": this.newComment
+              }
+              return axios({
+                method: "POST",
+                url: EMAIL_COMMENTS_URL,
+                data: x
+              })
+              .then(response => {
+                this.showSnackbar('Your comment was saved');
+              })
+              .catch(e => {
+                this.showSnackbar('Your comment could not be saved!', 'is-danger');
+              });
             }
-          },
+            this.showSnackbar(`Have you entered a comment?`, 'is-warning');
+          }, 5000, {'leading': false}),
           getSender: function(){
             let from = this.makeAddressList(`from`);
             return from && from.length === 1 ? from[0] : undefined;
@@ -218,6 +275,9 @@
             .catch(e => {
               return undefined;
             });
+          },
+          friendlyDate: function(d){
+            return moment(d).fromNow();
           },
         }
       })
