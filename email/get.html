@@ -69,7 +69,7 @@
               <b-input v-model="commenterName"></b-input>
             </b-field>
             <textarea id="markdown-comments-area" @input="updateComments" v-model="newComment" class="textarea is-primary is-small" placeholder="(Add comments using markdown)"></textarea>
-            <button class="button is-normal is-primary is-fullwidth" @click.prevent="saveComment()">Save Comment</button>
+            <button class="button is-normal is-primary is-fullwidth" :class="{'is-loading' : loadingComments}" @click.prevent="saveComment()">Save Comment</button>
             <p v-html="commentPreview" class="has-background-light is-size-7"></p>
             <div class="has-background-light is-size-7" v-for="comment in comments">
               <p class="has-text-weight-semibold">{{comment.commenter_name}} @ {{ friendlyDate(comment.commented_at)}}</p>
@@ -121,6 +121,7 @@
             comments: undefined,
             commenterName: undefined,
             commenterId: undefined,
+            loadingComments: undefined,
           }
         },
         async mounted(){
@@ -130,11 +131,12 @@
             this.emailSet = [await this.getEmail(this.pageId)];
           }
           if(this.shortLink){
-            this.shareableUrl = `${url.origin}/r/${this.shortLink}`;
+            this.shareableUrl = `${this.url.origin}/r/${this.shortLink}`;
           }
           this.showdownConverter = new showdown.Converter();
           this.showSnackbar('Retrieved your mail');
           this.showCommentSection = true;
+          this.loadingComments = true;
           this.getComments();
         },
         computed: {
@@ -149,14 +151,15 @@
             return this.currentEmail.attachments;
           },
           shortLink: () => {
-            var url = new URL(window.location);
             var urlParams = new URLSearchParams(window.location.search);
             return urlParams.has('shortlink') ? urlParams.get('shortlink'): undefined;
           },
           pageId: () => {
-            var url = new URL(window.location);
             var urlParams = new URLSearchParams(window.location.search);
             return urlParams.has('emailId') ? urlParams.get('emailId'): undefined;
+          },
+          url: () => {
+            return new URL(window.location);
           },
         },
         watch: {
@@ -206,6 +209,7 @@
           getComments: function(){
             if(this.shortLink){
               let vm = this;
+              this.loadingComments = true;
               return axios({
                 url: `${EMAIL_COMMENTS_URL}?short_link=${this.shortLink}`,
               })
@@ -214,8 +218,10 @@
                   vm.comments = response.data.comments.map(comment => JSON.parse(comment));
                   vm.comments.reverse();
                 }
+                this.loadingComments = undefined;
               })
               .catch(e => {
+                this.loadingComments = undefined;
                 return undefined;
               });
             }
@@ -224,10 +230,12 @@
             this.commentPreview = this.showdownConverter.makeHtml(this.newComment);
           },
           clearCommentAndPreview: function(){
+            this.loadingComments = undefined;
             this.newComment = undefined;
             this.commentPreview = DEFAULT_COMMENT;
           },
           saveComment: _.debounce(function(){
+            this.loadingComments = true;
             if(this.newComment){
               //post updated comments json to S3
               let x = {
@@ -253,6 +261,7 @@
               .then(() => this.getComments())
               .then(() => this.clearCommentAndPreview())
               .catch(e => {
+                this.loadingComments = undefined;
                 this.showSnackbar('Your comment could not be saved!', 'is-danger');
               });
             }
