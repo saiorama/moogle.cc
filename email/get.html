@@ -68,7 +68,7 @@
             <b-field label="Your name">
               <b-input v-model="commenterName"></b-input>
             </b-field>
-            <textarea id="markdown-comments-area" @input="updateComments" v-model="newComment" class="textarea is-primary is-small" placeholder="(Add comments using markdown)"></textarea>
+            <textarea id="markdown-comments-area" @input="updateComments" v-model="newComment" class="textarea is-primary is-small" placeholder="(Add comments using markdown. No emojis though.)"></textarea>
             <button class="button is-normal is-primary is-fullwidth" :class="{'is-loading' : loadingComments}" @click.prevent="saveComment()">Save Comment</button>
             <p v-html="commentPreview" class="has-background-light is-size-7"></p>
             <div class="has-background-light is-size-7" v-for="comment in comments">
