@@ -45,7 +45,11 @@
           <div class="" id="email-content">
             <!-- <h5 class="has-text-weight-light">Email</h5> -->
             <span v-if="!iframeSrc" class="has-text-weight-light">{{ statusMsg }}</span>
-            <div v-else>
+            <b-skeleton width="20%" v-if="!iframeSrc" :animated="animated"></b-skeleton>
+            <b-skeleton width="40%" v-if="!iframeSrc" :animated="animated"></b-skeleton>
+            <b-skeleton width="60%" v-if="!iframeSrc" :animated="animated"></b-skeleton>
+            <b-skeleton width="20%" v-if="!iframeSrc" :animated="animated"></b-skeleton>
+            <div v-if="iframeSrc">
               <h6 class="has-text-weight-light" v-if="attachments.length > 0">Attachments</h6>
               <ul class="menu">
                 <li v-for="(attachment, idx) in attachments" style='cursor: pointer' :key="`attachment-idx-`+idx" :id="`attachment-idx-`+idx" class='button'>
